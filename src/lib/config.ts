@@ -6,6 +6,7 @@ export interface RedisConnectionConfig {
   port: number;
   password: string;
   tls: boolean;
+  db: number;
 }
 
 const DATA_DIR = path.join(process.cwd(), "data");
@@ -17,6 +18,7 @@ function defaultConfig(): RedisConnectionConfig {
     port: Number(process.env.REDIS_PORT) || 6379,
     password: process.env.REDIS_PASSWORD || "",
     tls: false,
+    db: 0,
   };
 }
 
@@ -35,4 +37,9 @@ export function saveConnectionConfig(config: RedisConnectionConfig): void {
     fs.mkdirSync(DATA_DIR, { recursive: true });
   }
   fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2), "utf-8");
+}
+
+export function saveDb(db: number): void {
+  const current = getConnectionConfig();
+  saveConnectionConfig({ ...current, db });
 }

@@ -7,7 +7,7 @@ declare global {
 }
 
 function configKey(config: RedisConnectionConfig): string {
-  return `${config.host}:${config.port}:${config.password}:${config.tls}`;
+  return `${config.host}:${config.port}:${config.password}:${config.tls}:${config.db}`;
 }
 
 export function getRedisClient(): Redis {
@@ -27,6 +27,7 @@ export function getRedisClient(): Redis {
     port: config.port,
     password: config.password || undefined,
     tls: config.tls ? {} : undefined,
+    db: config.db,
     lazyConnect: false,
     maxRetriesPerRequest: 2,
     retryStrategy(times) {

@@ -8,10 +8,14 @@ export async function GET(request: Request) {
   const cursor = searchParams.get("cursor") || "0";
   const pattern = searchParams.get("pattern") || "*";
   const count = Number(searchParams.get("count")) || 100;
+  const typeFilter = searchParams.get("type");
 
   try {
     const client = getRedisClient();
-    const [nextCursor, foundKeys] = await client.scan(cursor, "MATCH", pattern, "COUNT", count);
+    const scanArgs = [cursor, "MATCH", pattern, "COUNT", String(count)];
+    if (typeFilter && typeFilter !== "all") scanArgs.push("TYPE", typeFilter);
+
+    const [nextCursor, foundKeys] = (await client.call("SCAN", ...scanArgs)) as [string, string[]];
 
     if (foundKeys.length === 0) {
       return NextResponse.json({ cursor: nextCursor, keys: [] });
