@@ -1,15 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { PlugZap } from "lucide-react";
+import { useToast } from "@/components/Toast";
 
 export default function SettingsPage() {
   const [host, setHost] = useState("");
   const [port, setPort] = useState("6379");
   const [tls, setTls] = useState(false);
+  const [db, setDb] = useState(0);
   const [password, setPassword] = useState("__unchanged__");
   const [hasPassword, setHasPassword] = useState(false);
-  const [message, setMessage] = useState<{ type: "ok" | "error"; text: string } | null>(null);
   const [saving, setSaving] = useState(false);
+  const { showToast } = useToast();
 
   useEffect(() => {
     fetch("/api/connection")
@@ -18,6 +21,7 @@ export default function SettingsPage() {
         setHost(json.host);
         setPort(String(json.port));
         setTls(json.tls);
+        setDb(json.db ?? 0);
         setHasPassword(json.hasPassword);
       });
   }, []);
@@ -25,21 +29,20 @@ export default function SettingsPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
-    setMessage(null);
     try {
       const res = await fetch("/api/connection", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ host, port: Number(port), tls, password }),
+        body: JSON.stringify({ host, port: Number(port), tls, db, password }),
       });
       const json = await res.json();
       if (!res.ok) {
-        setMessage({ type: "error", text: json.error || "Failed to save" });
+        showToast(json.error || "Failed to save", "error");
         return;
       }
-      setMessage({ type: "ok", text: "Connection saved and verified." });
-      setPassword("__unchanged__");
+      showToast("Connection saved and verified", "success");
       setHasPassword(Boolean(password !== "__unchanged__" ? password : hasPassword));
+      setPassword("__unchanged__");
     } finally {
       setSaving(false);
     }
@@ -47,21 +50,12 @@ export default function SettingsPage() {
 
   return (
     <div className="max-w-lg">
-      <h1 className="mb-6 text-lg font-semibold text-zinc-50">Redis Connection</h1>
+      <h1 className="mb-6 flex items-center gap-2 text-lg font-semibold text-zinc-50">
+        <PlugZap size={18} />
+        Redis Connection
+      </h1>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4 rounded-lg border border-zinc-800 bg-zinc-900 p-6">
-        {message && (
-          <div
-            className={`rounded-md px-3 py-2 text-sm ${
-              message.type === "ok"
-                ? "border border-emerald-800 bg-emerald-950 text-emerald-300"
-                : "border border-red-800 bg-red-950 text-red-300"
-            }`}
-          >
-            {message.text}
-          </div>
-        )}
-
         <div>
           <label className="mb-1 block text-xs font-medium text-zinc-400">Host</label>
           <input
@@ -72,14 +66,30 @@ export default function SettingsPage() {
           />
         </div>
 
-        <div>
-          <label className="mb-1 block text-xs font-medium text-zinc-400">Port</label>
-          <input
-            value={port}
-            onChange={(e) => setPort(e.target.value)}
-            className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-emerald-600"
-            required
-          />
+        <div className="flex gap-3">
+          <div className="flex-1">
+            <label className="mb-1 block text-xs font-medium text-zinc-400">Port</label>
+            <input
+              value={port}
+              onChange={(e) => setPort(e.target.value)}
+              className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-emerald-600"
+              required
+            />
+          </div>
+          <div className="flex-1">
+            <label className="mb-1 block text-xs font-medium text-zinc-400">Default database</label>
+            <select
+              value={db}
+              onChange={(e) => setDb(Number(e.target.value))}
+              className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-emerald-600"
+            >
+              {Array.from({ length: 16 }, (_, i) => (
+                <option key={i} value={i}>
+                  db{i}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         <div>
@@ -108,6 +118,10 @@ export default function SettingsPage() {
           {saving ? "Testing connection..." : "Save connection"}
         </button>
       </form>
+
+      <p className="mt-3 text-xs text-zinc-600">
+        Tip: use the database switcher in the sidebar for a quick DB change without retesting the connection.
+      </p>
     </div>
   );
 }

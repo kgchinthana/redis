@@ -10,6 +10,7 @@ export async function GET() {
     host: config.host,
     port: config.port,
     tls: config.tls,
+    db: config.db,
     hasPassword: Boolean(config.password),
   });
 }
@@ -22,8 +23,9 @@ export async function POST(request: Request) {
   // Keep existing password if the client sends the "unchanged" sentinel or omits it.
   const existing = getConnectionConfig();
   const password = body.password === undefined || body.password === "__unchanged__" ? existing.password : String(body.password);
+  const db = body.db !== undefined ? Number(body.db) : existing.db;
 
-  const candidate = { host, port, password, tls };
+  const candidate = { host, port, password, tls, db };
   const result = await testConnection(candidate);
   if (!result.ok) {
     return NextResponse.json({ error: `Could not connect: ${result.error}` }, { status: 400 });
